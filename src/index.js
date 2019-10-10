@@ -6,7 +6,7 @@ class Todos extends React.Component {
         this.state = {list: [], text: ''};
     }
 
-    onChange = (event) => {
+    onBlur = (event) => {
         this.setState({text: event.target.value});
     };
 
@@ -18,12 +18,14 @@ class Todos extends React.Component {
     };
 
     onDel = (index) => {
+        const copyList = JSON.parse(JSON.stringify(this.state.list));
+        const newList = copyList.filter((item, i) => index !== i);
         this.setState({
-            list: [...this.state.list.slice(0, index), ...this.state.list.slice(index + 1)]
+            list:newList
         });
     };
 
-    componentDidMount(){
+    componentDidMount() {
         console.log('组件挂载成功');
     }
 
@@ -31,7 +33,7 @@ class Todos extends React.Component {
         let lists = this.state.list.map((item, index) => {
             return React.createElement('li', {}, item, React.createElement('button', {onClick: () => this.onDel(index)}, 'X'));
         });
-        let input = React.createElement('input', {onKeyup: this.onChange, value: this.state.text});
+        let input = React.createElement('input', {onBlur: this.onBlur, value: this.state.text});
         let button = React.createElement('button', {onClick: this.handleClick}, "+");
         return React.createElement('div', {}, input, button, React.createElement('ul', {}, ...lists));
     }

@@ -92,7 +92,6 @@ class NativeUnit extends Unit {
     }
 
     update(nextElement) {
-        console.log(nextElement);
         let oldProps = this._currentElement.props;
         let newProps = nextElement.props;
         this.updateDOMProperties(oldProps, newProps);
@@ -102,6 +101,7 @@ class NativeUnit extends Unit {
     updateDOMChildren(newChildrenElements) {
         updateDepth++;
         this.diff(diffQueue, newChildrenElements);
+        console.log(diffQueue);
         updateDepth--;
         if (updateDepth === 0) {
             this.patch(diffQueue);
@@ -147,48 +147,69 @@ class NativeUnit extends Unit {
     }
 
     diff(diffQueue, newChildrenElements) {
-        //第一生成一个map,key=老的unit
+        // 生成一个子元素单元的 map => {key:老的 unit}
         let oldChildrenUnitMap = this.getOldChildrenMap(this._renderedChildrenUnits);
-        //第二步生成一个新的儿子unit的数组
+        // 生成一个新子元素单元的 map 和数组
         let {newChildrenUnitMap, newChildrenUnits} = this.getNewChildren(oldChildrenUnitMap, newChildrenElements);
-        let lastIndex = 0;//上一个已经确定位置的索引
+        // 上一个"已经确定好位置的"(在新的集合中，已经排列好顺序的)节点在老的集合中的索引
+        let lastIndex = 0;
         for (let i = 0; i < newChildrenUnits.length; i++) {
             let newUnit = newChildrenUnits[i];
-            //第一个拿 到的就是newKey=A
+            // 获取当前节点的 key
             let newKey = (newUnit._currentElement.props && newUnit._currentElement.props.key) || i.toString();
+            // 在老的集合中查找 key 对应的节点
             let oldChildUnit = oldChildrenUnitMap[newKey];
-            if (oldChildUnit === newUnit) {//如果说新老一致的话说明复用了老节点
+            // 如果相等的话，那就复用老的节点
+            // console.log(oldChildUnit);
+            // console.log(newUnit);
+            if (oldChildUnit === newUnit) {
+                // 如果老节点的挂载索引 小于 上一个"已经确定好位置的"节点的索引
+                // 说明在老的集合中，这个老节点的位置是排在 上一个"已经确定好位置的"节点 前面的
+                // 按照新的集合排列顺序，需要把它移动到 上一个"已经确定好位置的"节点 后面去
                 if (oldChildUnit._mountIndex < lastIndex) {
                     diffQueue.push({
                         parentId: this._reactId,
                         parentNode: $(`[data-react-id="${this._reactId}"]`),
                         type: types.MOVE,
+                        // 老集合中的排列位置
                         fromIndex: oldChildUnit._mountIndex,
+                        // 新集合中的排列位置
                         toIndex: i
                     });
                 }
                 lastIndex = Math.max(lastIndex, oldChildUnit._mountIndex);
-            } else {
+            }
+            // 如果新旧节点不相等
+            // 要么是老的集合中找不到该节点，需要新增
+            // 要么就是新的集合中不存在该节点，需要删除
+            else {
+                // 节点删除
+                console.log('oldChildUnit',oldChildUnit);
                 if (oldChildUnit) {
+                    // diffQueue.push({
+                    //     parentId: this._reactId,
+                    //     parentNode: $(`[data-react-id="${this._reactId}"]`),
+                    //     type: types.REMOVE,
+                    //     fromIndex: oldChildUnit._mountIndex
+                    // });
+                    // this._renderedChildrenUnits = this._renderedChildrenUnits.filter(item => item !== oldChildUnit);
+                    // $(document).undelegate(`.${oldChildUnit._reactId}`);
+                }
+                // 节点新增
+                else{
                     diffQueue.push({
                         parentId: this._reactId,
                         parentNode: $(`[data-react-id="${this._reactId}"]`),
-                        type: types.REMOVE,
-                        fromIndex: oldChildUnit._mountIndex
+                        type: types.INSERT,
+                        toIndex: i,
+                        markUp: newUnit.getHtmlString(`${this._reactId}.${i}`)
                     });
-                    this._renderedChildrenUnits = this._renderedChildrenUnits.filter(item => item != oldChildUnit);
-                    $(document).undelegate(`.${oldChildUnit._reactId}`);
                 }
-                diffQueue.push({
-                    parentId: this._reactId,
-                    parentNode: $(`[data-react-id="${this._reactId}"]`),
-                    type: types.INSERT,
-                    toIndex: i,
-                    markUp: newUnit.getHtmlString(`${this._reactId}.${i}`)
-                });
             }
+            // 给当前节点设置新的挂载索引
             newUnit._mountIndex = i;
         }
+
         for (let oldKey in oldChildrenUnitMap) {
             let oldChild = oldChildrenUnitMap[oldKey];
             if (!newChildrenUnitMap.hasOwnProperty(oldKey)) {
@@ -198,9 +219,9 @@ class NativeUnit extends Unit {
                     type: types.REMOVE,
                     fromIndex: oldChild._mountIndex
                 });
-                //如果要删除掉某一个节点，则要把它对应的unit也删除掉
-                this._renderedChildrenUnits = this._renderedChildrenUnits.filter(item => item != oldChild);
-                //还要把这个节点地应的事件委托也删除掉
+                // 如果要删除掉某一个节点，则要把它对应的 unit也删除掉
+                this._renderedChildrenUnits = this._renderedChildrenUnits.filter(item => item !== oldChild);
+                // 还要把这个节对应的事件委托也删除掉
                 $(document).undelegate(`.${oldChild._reactId}`);
             }
         }
@@ -216,6 +237,8 @@ class NativeUnit extends Unit {
             let oldUnit = oldChildrenUnitMap[newKey];//找到老的unit
             let oldElement = oldUnit && oldUnit._currentElement;//获取老元素
             if (shouldDeepCompare(oldElement, newElement)) {
+                // 深度遍历，直到所有子元素更新完毕
+                // oldUnit 可以是文本单元、原生 dom 节点单元、组件单元 ，调用各自不同的更新逻辑
                 oldUnit.update(newElement);
                 newChildrenUnits.push(oldUnit);
                 newChildrenUnitMap[newKey] = oldUnit;
@@ -252,7 +275,7 @@ class NativeUnit extends Unit {
         for (propName in newProps) {
             // 如果是 children 属性的话，我们先不处理
             if (propName === 'children') {
-                continue;
+                // continue;
             } else if (/^on[A-Z]/.test(propName)) {
                 let eventName = propName.slice(2).toLowerCase();
                 $(document).delegate(`[data-react-id="${this._reactId}"]`, `${eventName}.${this._reactId}`, newProps[propName]);
