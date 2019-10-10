@@ -92,13 +92,13 @@ class NativeUnit extends Unit {
     }
 
     update(nextElement) {
+        console.log(nextElement);
         let oldProps = this._currentElement.props;
         let newProps = nextElement.props;
         this.updateDOMProperties(oldProps, newProps);
         this.updateDOMChildren(nextElement.props.children);
     }
 
-    // 此处要把新的儿子们传过来，然后我老的儿子们进行对比，然后找出差异，进行修改DOM
     updateDOMChildren(newChildrenElements) {
         updateDepth++;
         this.diff(diffQueue, newChildrenElements);
@@ -211,7 +211,7 @@ class NativeUnit extends Unit {
         let newChildrenUnits = [];
         let newChildrenUnitMap = {};
         newChildrenElements.forEach((newElement, index) => {
-            //一定要给定key，千万不要让它走内的索引key
+            // 一定要给定 key，如果使用这里的 index 作为 key ，会消耗大量的性能
             let newKey = (newElement.props && newElement.props.key) || index.toString();
             let oldUnit = oldChildrenUnitMap[newKey];//找到老的unit
             let oldElement = oldUnit && oldUnit._currentElement;//获取老元素
