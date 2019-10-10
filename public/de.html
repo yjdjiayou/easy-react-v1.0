@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+<button id="btn1">按钮</button>
+<script
+  src="http://code.jquery.com/jquery-3.4.1.js"
+  integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+  crossorigin="anonymous"></script>
+<script>
+var $document = $(document);
+//为#btn1元素绑定click事件，定义在foo和bar两个命名空间下
+$document.delegate("#btn1", "click.0", function(event){
+    alert("click.0");
+});
+$document.delegate("#btn1", "mouseover.0", function(event){
+    alert("mouseover.0");
+});
+
+$document.undelegate("#btn1", "click");
+$document.undelegate("#btn1", "mouseover");
+$document.undelegate(".0");
+</script>
+</body>
+</html>
