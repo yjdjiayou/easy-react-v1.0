@@ -74,7 +74,8 @@ class NativeUnit extends Unit {
             // 如果是一个类名
             else if (propName === 'className') {
                 tagStart += (` class="${props[propName]}" `);
-            } else if (propName === 'children') {
+            }
+            else if (propName === 'children') {
                 let children = props[propName];
                 children.forEach((child, index) => {
                     let childUnit = createUnit(child);
@@ -99,10 +100,18 @@ class NativeUnit extends Unit {
     }
 
     updateDOMChildren(newChildrenElements) {
+        // 0        tree
+        //          /   \
+        // 1       A     B
+        //        / \   / \
+        // 2     C   D  E  F
+        // 从树的最顶层开始往下深度遍历
+        // 如果有子节点就往下 diff ，复杂度就加 1
+        // 子节点 diff 完，就往上回去，复杂度减 1
         updateDepth++;
         this.diff(diffQueue, newChildrenElements);
-        console.log(diffQueue);
         updateDepth--;
+        // 当复杂度为 0 时，说明整棵树已经 diff 完成，开始更新
         if (updateDepth === 0) {
             this.patch(diffQueue);
             diffQueue = [];
@@ -110,10 +119,14 @@ class NativeUnit extends Unit {
     }
 
     patch(diffQueue) {
-        let deleteChildren = [];//这里要放着所有将要删除的节点
-        let deleteMap = {};//这里暂存能复用的节点
+        // 这里要放着所有将要删除的节点
+        let deleteChildren = [];
+        // 这里暂存能复用的节点
+        let deleteMap = {};
+        // 先删除旧集合中的元素，然后再插入元素，否则索引会错乱
         for (let i = 0; i < diffQueue.length; i++) {
             let difference = diffQueue[i];
+            // 如果是移动操作，要先把旧集合中的元素删除掉，然后再插入
             if (difference.type === types.MOVE || difference.type === types.REMOVE) {
                 let fromIndex = difference.fromIndex;
                 let oldChild = $(difference.parentNode.children().get(fromIndex));
@@ -183,17 +196,18 @@ class NativeUnit extends Unit {
             // 要么是老的集合中找不到该节点，需要新增
             // 要么就是新的集合中不存在该节点，需要删除
             else {
-                // 节点删除
-                console.log('oldChildUnit',oldChildUnit);
+                // 这里的节点删除，是为了避免出现以下情况：
+                // <li key={index}>{item}</li> => <span key={index}>{item}</span>
+                // 原本是 li 的元素，现在改成了 span，但是两者的 key 是一样的，这时候就需要把老的 li 元素给删除掉
                 if (oldChildUnit) {
-                    // diffQueue.push({
-                    //     parentId: this._reactId,
-                    //     parentNode: $(`[data-react-id="${this._reactId}"]`),
-                    //     type: types.REMOVE,
-                    //     fromIndex: oldChildUnit._mountIndex
-                    // });
-                    // this._renderedChildrenUnits = this._renderedChildrenUnits.filter(item => item !== oldChildUnit);
-                    // $(document).undelegate(`.${oldChildUnit._reactId}`);
+                    diffQueue.push({
+                        parentId: this._reactId,
+                        parentNode: $(`[data-react-id="${this._reactId}"]`),
+                        type: types.REMOVE,
+                        fromIndex: oldChildUnit._mountIndex
+                    });
+                    this._renderedChildrenUnits = this._renderedChildrenUnits.filter(item => item !== oldChildUnit);
+                    $(document).undelegate(`.${oldChildUnit._reactId}`);
                 }
                 // 节点新增
                 else{
@@ -222,7 +236,8 @@ class NativeUnit extends Unit {
                 // 如果要删除掉某一个节点，则要把它对应的 unit也删除掉
                 this._renderedChildrenUnits = this._renderedChildrenUnits.filter(item => item !== oldChild);
                 // 还要把这个节对应的事件委托也删除掉
-                $(document).undelegate(`.${oldChild._reactId}`);
+                // console.log(oldChild._reactId);
+                // $(document).undelegate(`.${oldChild._reactId}`);
             }
         }
 
