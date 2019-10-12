@@ -74,8 +74,7 @@ class NativeUnit extends Unit {
             // 如果是一个类名
             else if (propName === 'className') {
                 tagStart += (` class="${props[propName]}" `);
-            }
-            else if (propName === 'children') {
+            } else if (propName === 'children') {
                 let children = props[propName];
                 children.forEach((child, index) => {
                     let childUnit = createUnit(child);
@@ -93,10 +92,20 @@ class NativeUnit extends Unit {
     }
 
     update(nextElement) {
+        // console.log(nextElement);
         let oldProps = this._currentElement.props;
         let newProps = nextElement.props;
         this.updateDOMProperties(oldProps, newProps);
         this.updateDOMChildren(nextElement.props.children);
+        this._currentElement.props = newProps;
+        // 0.0  => input
+        // 0.1  => button
+        // 0.1.0  => span(+)
+        // 0.2  => ul
+        // 0.2.x  => li
+        // 0.2.x.0  => span
+        // 0.2.x.1  => button
+        // 0.2.x.1.0  => span(X)
     }
 
     updateDOMChildren(newChildrenElements) {
@@ -138,7 +147,6 @@ class NativeUnit extends Unit {
             }
         }
         $.each(deleteChildren, (idx, item) => $(item).remove());
-
         for (let i = 0; i < diffQueue.length; i++) {
             let difference = diffQueue[i];
             switch (difference.type) {
@@ -173,8 +181,6 @@ class NativeUnit extends Unit {
             // 在老的集合中查找 key 对应的节点
             let oldChildUnit = oldChildrenUnitMap[newKey];
             // 如果相等的话，那就复用老的节点
-            // console.log(oldChildUnit);
-            // console.log(newUnit);
             if (oldChildUnit === newUnit) {
                 // 如果老节点的挂载索引 小于 上一个"已经确定好位置的"节点的索引
                 // 说明在老的集合中，这个老节点的位置是排在 上一个"已经确定好位置的"节点 前面的
@@ -207,10 +213,10 @@ class NativeUnit extends Unit {
                         fromIndex: oldChildUnit._mountIndex
                     });
                     this._renderedChildrenUnits = this._renderedChildrenUnits.filter(item => item !== oldChildUnit);
-                    $(document).undelegate(`.${oldChildUnit._reactId}`);
+                    // $(document).undelegate(`.${oldChildUnit._reactId}`);
                 }
                 // 节点新增
-                else{
+                else {
                     diffQueue.push({
                         parentId: this._reactId,
                         parentNode: $(`[data-react-id="${this._reactId}"]`),
@@ -279,10 +285,15 @@ class NativeUnit extends Unit {
 
     updateDOMProperties(oldProps, newProps) {
         let propName;
-        for (propName in oldProps) {//循环老的属性集合
+        // 循环老的属性集合
+        // console.log(this._reactId);
+        // console.log('oldProps',oldProps);
+        // console.log('newProps',newProps);
+        for (propName in oldProps) {
             if (!newProps.hasOwnProperty(propName)) {
                 $(`[data-react-id="${this._reactId}"]`).removeAttr(propName);
             }
+            // console.log(propName, this._reactId);
             if (/^on[A-Z]/.test(propName)) {
                 $(document).undelegate(`.${this._reactId}`);
             }
@@ -292,6 +303,7 @@ class NativeUnit extends Unit {
             if (propName === 'children') {
                 // continue;
             } else if (/^on[A-Z]/.test(propName)) {
+                // console.log(propName);
                 let eventName = propName.slice(2).toLowerCase();
                 $(document).delegate(`[data-react-id="${this._reactId}"]`, `${eventName}.${this._reactId}`, newProps[propName]);
             } else if (propName === 'className') {

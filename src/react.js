@@ -12,7 +12,9 @@ function render(element, container) {
     $(container).html(htmlString);
     // 触发生命周期钩子 componentDidMount
     $(document).trigger('mounted');
+    window.jq = $(document);
 }
+
 
 const React = {
     render,

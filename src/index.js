@@ -6,20 +6,24 @@ class Todos extends React.Component {
         this.state = {list: [], text: ''};
     }
 
-    onBlur = (event) => {
+
+    onKeyup = (event) => {
         this.setState({text: event.target.value});
     };
 
     handleClick = (ev) => {
         let text = this.state.text;
         this.setState({
-            list: [...this.state.list, text], text: ''
+            list: [...this.state.list, text],
+            text: ''
         });
     };
 
     onDel = (index) => {
         const copyList = JSON.parse(JSON.stringify(this.state.list));
-        const newList = copyList.filter((item, i) => index !== i);
+        const newList = copyList.filter((item, i) => {
+            return index !== i;
+        });
         this.setState({
             list:newList
         });
@@ -33,7 +37,7 @@ class Todos extends React.Component {
         let lists = this.state.list.map((item, index) => {
             return React.createElement('li', {}, item, React.createElement('button', {onClick: () => this.onDel(index)}, 'X'));
         });
-        let input = React.createElement('input', {onBlur: this.onBlur, value: this.state.text});
+        let input = React.createElement('input', {onKeyup: this.onKeyup, value: this.state.text});
         let button = React.createElement('button', {onClick: this.handleClick}, "+");
         return React.createElement('div', {}, input, button, React.createElement('ul', {}, ...lists));
     }
